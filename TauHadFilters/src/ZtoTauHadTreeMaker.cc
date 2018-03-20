@@ -302,6 +302,11 @@ ZtoTauHadTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
   bGenTau_phi.clear();
   bGenTau_eta.clear();
   bGenTau_status.clear();
+  bGenHadTau_pt.clear();
+  bGenHadTau_m.clear();
+  bGenHadTau_phi.clear();
+  bGenHadTau_eta.clear();
+  bGenHadTau_status.clear();
 
   bMuon_genTau_dR.clear();
   bTauCand_genTau_dR.clear();
