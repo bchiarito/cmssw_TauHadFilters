@@ -114,7 +114,7 @@ ZtoTauHadTruthSelector::filter(edm::Event& iEvent, const edm::EventSetup& iSetup
   vector<string> leptons;
   for (unsigned int i = 0; i < genparticles->size(); i++) {
     const reco::GenParticle & genparticle = (*genparticles)[i];
-    if (genparticle.status() != 22) continue;
+    if (genparticle.status() != 21 && genparticle.status() != 22) continue;
     leptons = getDecay(genparticle);
   }
   if (leptons.size() == 0) 
@@ -293,9 +293,9 @@ ZtoTauHadTruthSelector::getDecay(const reco::Candidate & genparticle, int flag)
     if (abs(genparticle.pdgId()) == 211) { products.push_back("cpion"); return products; }
   }
 
-  // ignore quarks and gluons and their daughters
-  if (genparticle.pdgId() >= 1 && genparticle.pdgId() <= 8) { return products; }
-  if (genparticle.pdgId() == 21) { return products; }
+  // ignore quarks and gluons and their daughters, unless status 21
+  if (genparticle.status() != 21 && genparticle.pdgId() >= 1 && genparticle.pdgId() <= 8) { return products; }
+  if (genparticle.status() != 21 && genparticle.pdgId() == 21) { return products; }
 
   if (genparticle.pdgId() == 11) { products.push_back("e-"); return products; }
   if (genparticle.pdgId() == -11) { products.push_back("e+"); return products; }
