@@ -21,6 +21,7 @@
 #include <iostream>
 // ROOT includes
 #include "TVector2.h"
+#include "TLorentzVector.h"
 #include "TH1.h"
 #include "TTree.h"
 // cmssw framework includes
@@ -50,6 +51,8 @@
 // namesspace defaults
 using std::vector;
 using std::string;
+using std::cout;
+using std::endl;
 
 //
 // class declaration
@@ -68,6 +71,8 @@ class ZtoTauHadTreeMaker : public edm::one::EDAnalyzer<edm::one::SharedResources
       const reco::Candidate * tauDaughter(const reco::Candidate *);
 
       // Configuration Parameters
+      bool cfg_recoOnly;
+      bool cfg_tauObjs;
 
       // EDM Collection lables
       edm::EDGetTokenT<reco::VertexCollection> vtxToken_;
@@ -89,67 +94,45 @@ class ZtoTauHadTreeMaker : public edm::one::EDAnalyzer<edm::one::SharedResources
       int bevent;
       int brun;
       int blumi;
-      double bdecayType;
       // cutflow
       int bpassMuon;
       int bpassTauCand;
-      int bpassTauAndMuon;
       int bpassTauMuonPair;
       int bpassDR;
-      int bpassOppSign;
       int bpassMT;
       int bpassPzeta;
       int bpassExtraLep;
-      int bpassDiMuon;
-      int bpassExtraElec;
-      int bpassExtraMuon;
       int bpassBTag;
       int bpassAll;
-      // gencutflow
-      int bgenpassTauCand;
-      int bgenpassMuon;
-      int bgenpassTauAndMuon;
-      int bgenpassTauMuonPair;
       // genparticles
-      int bnGenZ;
-      vector<Double_t> bGenZ_pt;
-      vector<Double_t> bGenZ_phi;
-      vector<Double_t> bGenZ_eta;
-      vector<Double_t> bGenZ_m;
-      vector<Double_t> bGenZ_status;
-      int bGenTau_nCon;
+      double bdecayType;
+      int bnGenHadTau;
       vector<Double_t> bGenTau_con_pt;
       vector<Double_t> bGenTau_con_dr;
       double bGenTau_con_maxdr;
-      int bnGenMuon;
-      vector<Double_t> bGenMuon_pt;
-      vector<Double_t> bGenMuon_phi;
-      vector<Double_t> bGenMuon_eta;
-      vector<Double_t> bGenMuon_m;
-      int bnGenTau;
-      vector<Double_t> bGenTau_pt;
-      vector<Double_t> bGenTau_phi;
-      vector<Double_t> bGenTau_eta;
-      vector<Double_t> bGenTau_m;
-      vector<Double_t> bGenTau_status;
-      int bnGenHadTau;
-      vector<Double_t> bGenHadTau_pt;
-      vector<Double_t> bGenHadTau_phi;
-      vector<Double_t> bGenHadTau_eta;
-      vector<Double_t> bGenHadTau_m;
-      vector<Double_t> bGenHadTau_status;
-      // muons
-      int bnMuon;
-      vector<Double_t> bMuon_genTau_dR;
-      // tau cands
-      int bnTauCand;
-      vector<Double_t> bTauCand_genTau_dR;
+      int bGenTau_nCon;
+      // reco
+      int bnTaucands;
+      vector<Double_t> btaucand_pt;
+      vector<Double_t> btaucand_eta;
+      vector<Double_t> btaucand_phi;
+      vector<Double_t> btaucand_e;
+      int bnMuoncands;
+      vector<Double_t> bmuoncand_pt;
+      vector<Double_t> bmuoncand_eta;
+      vector<Double_t> bmuoncand_phi;
+      vector<Double_t> bmuoncand_e;
+      int bmuonIndex;
+      int btauIndex;
+      double bmVis;
 };
 
 //
 // constructors
 //
-ZtoTauHadTreeMaker::ZtoTauHadTreeMaker(const edm::ParameterSet& iConfig)
+ZtoTauHadTreeMaker::ZtoTauHadTreeMaker(const edm::ParameterSet& iConfig) :
+  cfg_recoOnly(iConfig.getUntrackedParameter<bool>("recoOnly")),
+  cfg_tauObjs(iConfig.getUntrackedParameter<bool>("tauObjs"))
 {
   vtxToken_ = consumes<vector<reco::Vertex>>(edm::InputTag("offlineSlimmedPrimaryVertices"));
   muonToken_ = consumes<std::vector<pat::Muon>>(edm::InputTag("slimmedMuons"));
@@ -174,57 +157,34 @@ ZtoTauHadTreeMaker::ZtoTauHadTreeMaker(const edm::ParameterSet& iConfig)
   // cutflow
   tree_->Branch("passMuon",&bpassMuon,"passMuon/I");
   tree_->Branch("passTauCand",&bpassTauCand,"passTauCand/I");
-  tree_->Branch("passTauAndMuon",&bpassTauAndMuon,"passTauAndMuon/I");
   tree_->Branch("passTauMuonPair",&bpassTauMuonPair,"passTauMuonPair/I");
   tree_->Branch("passDR",&bpassDR,"passDR/I");
-  tree_->Branch("passOppSign",&bpassOppSign,"passOppSign/I");
   tree_->Branch("passMT",&bpassMT,"passMT/I");
   tree_->Branch("passPzeta",&bpassPzeta,"passPzeta/I");
   tree_->Branch("passExtraLep",&bpassExtraLep,"passExtraLep/I");
-  tree_->Branch("passDiMuon",&bpassDiMuon,"passDiMuon/I");
-  tree_->Branch("passExtraElec",&bpassExtraElec,"passExtraElec/I");
-  tree_->Branch("passExtraMuon",&bpassExtraMuon,"passExtraMuon/I");
   tree_->Branch("passBTag",&bpassBTag,"passBTag/I");
   tree_->Branch("passAll",&bpassAll,"passAll/I");
-  // gen cutflow
-  tree_->Branch("genpassMuon",&bgenpassMuon,"genpassMuon/I");
-  tree_->Branch("genpassTauCand",&bgenpassTauCand,"genpassTauCand/I");
-  tree_->Branch("genpassTauAndMuon",&bgenpassTauAndMuon,"genpassTauAndMuon/I");
-  tree_->Branch("genpassTauMuonPair",&bgenpassTauMuonPair,"genpassTauMuonPair/I");
+  // tau cands
+  tree_->Branch("nTaucands",&bnTaucands,"nTaucands/I"); 
+  tree_->Branch("taucand_pt",&btaucand_pt); 
+  tree_->Branch("taucand_eta",&btaucand_eta); 
+  tree_->Branch("taucand_phi",&btaucand_phi); 
+  tree_->Branch("taucand_e",&btaucand_e); 
+  // muon cands
+  tree_->Branch("nMuoncands",&bnMuoncands,"nMuoncands/I"); 
+  tree_->Branch("muoncand_pt",&bmuoncand_pt); 
+  tree_->Branch("muoncand_eta",&bmuoncand_eta); 
+  tree_->Branch("muoncand_phi",&bmuoncand_phi); 
+  tree_->Branch("muoncand_e",&bmuoncand_e);
+  // reco
+  tree_->Branch("mVis",&bmVis,"mVis/D");
+  tree_->Branch("muonIndex",&bmuonIndex,"muonIndex/I");
+  tree_->Branch("tauIndex",&btauIndex,"tauIndex/I");
   // genparticles
-  tree_->Branch("nGenZ",&bnGenZ,"nGenZ/I"); 
-  tree_->Branch("GenZ_pt",&bGenZ_pt); 
-  tree_->Branch("GenZ_m",&bGenZ_m);
-  tree_->Branch("GenZ_phi",&bGenZ_phi);
-  tree_->Branch("GenZ_eta",&bGenZ_eta);
-  tree_->Branch("GenZ_status",&bGenZ_status);
-  tree_->Branch("nGenMuon",&bnGenMuon,"nGenMuon/I"); 
-  tree_->Branch("GenMuon_pt",&bGenMuon_pt); 
-  tree_->Branch("GenMuon_m",&bGenMuon_m);
-  tree_->Branch("GenMuon_phi",&bGenMuon_phi);
-  tree_->Branch("GenMuon_eta",&bGenMuon_eta);
-  tree_->Branch("nGenTau",&bnGenTau,"nGenTau/I"); 
-  tree_->Branch("GenTau_pt",&bGenTau_pt); 
-  tree_->Branch("GenTau_m",&bGenTau_m);
-  tree_->Branch("GenTau_phi",&bGenTau_phi);
-  tree_->Branch("GenTau_eta",&bGenTau_eta);
-  tree_->Branch("GenTau_status",&bGenTau_status);
   tree_->Branch("GenTau_nCon",&bGenTau_nCon,"GenTau_nCon/I");
   tree_->Branch("GenTau_con_pt",&bGenTau_con_pt);
   tree_->Branch("GenTau_con_dr",&bGenTau_con_dr);
   tree_->Branch("GenTau_con_maxdr",&bGenTau_con_maxdr,"GenTau_con_maxdr/D");
-  tree_->Branch("nGenHadTau",&bnGenHadTau,"nGenHadTau/I"); 
-  tree_->Branch("GenHadTau_pt",&bGenHadTau_pt); 
-  tree_->Branch("GenHadTau_m",&bGenHadTau_m);
-  tree_->Branch("GenHadTau_phi",&bGenHadTau_phi);
-  tree_->Branch("GenHadTau_eta",&bGenHadTau_eta);
-  tree_->Branch("GenHadTau_status",&bGenHadTau_status);
-  // muons
-  tree_->Branch("nMuon",&bnMuon,"nMuon/I");
-  tree_->Branch("Muon_genTau_dR",&bMuon_genTau_dR);
-  // tau cands
-  tree_->Branch("nTauCand",&bnTauCand,"nTauCand/I");
-  tree_->Branch("TauCand_genTau_dR",&bTauCand_genTau_dR);
 }
 
 //
@@ -242,6 +202,9 @@ ZtoTauHadTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
   edm::Handle<reco::VertexCollection> vertices;
   iEvent.getByToken(vtxToken_, vertices);
   const reco::Vertex &PV = vertices->front();
+
+  edm::Handle<pat::TauCollection> taus;
+  iEvent.getByToken(tauToken_, taus);
 
   edm::Handle<pat::MuonCollection> muons;
   iEvent.getByToken(muonToken_, muons);
@@ -266,51 +229,35 @@ ZtoTauHadTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
   bevent = iEvent.id().event();
   brun = iEvent.id().run();
   blumi = iEvent.id().luminosityBlock();
-  bdecayType = -1;
-  bnGenHadTau = 0;
 
   bpassMuon = false;
   bpassTauCand = false;
-  bpassTauAndMuon = false;
   bpassTauMuonPair = false;
   bpassDR = false;
-  bpassOppSign = false;
   bpassMT = false;
   bpassPzeta = false;
   bpassExtraLep = false;
   bpassBTag = false;
   bpassAll = false;
 
-  bgenpassTauCand = false;
-  bgenpassTauMuonPair = false;
-  bgenpassMuon = false;
-  bgenpassTauAndMuon = false;
+  bnGenHadTau = 0;
 
-  bGenZ_pt.clear();
-  bGenZ_m.clear();
-  bGenZ_phi.clear();
-  bGenZ_eta.clear();
-  bGenZ_status.clear();
-  bGenTau_con_pt.clear();
-  bGenTau_con_dr.clear();
-  bGenMuon_pt.clear();
-  bGenMuon_m.clear();
-  bGenMuon_phi.clear();
-  bGenMuon_eta.clear();
-  bGenTau_pt.clear();
-  bGenTau_m.clear();
-  bGenTau_phi.clear();
-  bGenTau_eta.clear();
-  bGenTau_status.clear();
-  bGenHadTau_pt.clear();
-  bGenHadTau_m.clear();
-  bGenHadTau_phi.clear();
-  bGenHadTau_eta.clear();
-  bGenHadTau_status.clear();
+  bdecayType = -1;
+  bmVis = -1;
+  bmuonIndex = -1;
+  btauIndex = -1;
+  bnMuoncands = -1;
+  bmuoncand_pt.clear();
+  bmuoncand_eta.clear();
+  bmuoncand_phi.clear();
+  bmuoncand_e.clear();
+  bnTaucands = -1;
+  btaucand_pt.clear();
+  btaucand_eta.clear();
+  btaucand_phi.clear();
+  btaucand_e.clear();
 
-  bMuon_genTau_dR.clear();
-  bTauCand_genTau_dR.clear();
-
+  if (!cfg_recoOnly) {
   // decay type
   vector<string> leptons;
   for (unsigned int i = 0; i < genparticles->size(); i++) {
@@ -460,78 +407,15 @@ ZtoTauHadTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
       found_one_hadtau = true;
     }
   }
-  //bnGenHadTau = hadronicTaus.size();
+  
+  } // end cfg_recoOnly check
 
-  // gen particles
-  vector<const reco::GenParticle*> gen_taus;
-  vector<const reco::GenParticle*> gen_had_taus;
-  vector<const reco::GenParticle*> gen_muons;
-  vector<const reco::GenParticle*> gen_zs;
-  for (unsigned int i = 0; i < genparticles->size(); i++) {
-    const reco::GenParticle &genparticle = (*genparticles)[i];
-    if (genparticle.pdgId() == 23 && genparticle.status() == 62) {
-      gen_zs.push_back(&genparticle);
-      bGenZ_pt.push_back(genparticle.pt());
-      bGenZ_m.push_back(genparticle.mass());
-      bGenZ_phi.push_back(genparticle.phi());
-      bGenZ_eta.push_back(genparticle.eta());
-      bGenZ_status.push_back(genparticle.status());
-    }
-    if (abs(genparticle.pdgId()) == 13) {
-      gen_muons.push_back(&genparticle);
-      bGenMuon_pt.push_back(genparticle.pt());
-      bGenMuon_m.push_back(genparticle.mass());
-      bGenMuon_phi.push_back(genparticle.phi());
-      bGenMuon_eta.push_back(genparticle.eta());
-    }
-    if (abs(genparticle.pdgId()) == 15) {
-      gen_taus.push_back(&genparticle);
-      bGenTau_pt.push_back(genparticle.pt());
-      bGenTau_m.push_back(genparticle.mass());
-      bGenTau_phi.push_back(genparticle.phi());
-      bGenTau_eta.push_back(genparticle.eta());
-      bGenTau_status.push_back(genparticle.status());
-    }
-    if (abs(genparticle.pdgId()) == 15) {
-      if (!isAncestorOfZ(&genparticle)) continue;
-      std::vector<string> leptons = getDecay(genparticle);
-      if (! (std::find(leptons.begin(), leptons.end(), "tau+had10") != leptons.end() ||
-          std::find(leptons.begin(), leptons.end(), "tau+had1") != leptons.end() ||
-          std::find(leptons.begin(), leptons.end(), "tau+had30") != leptons.end() ||
-          std::find(leptons.begin(), leptons.end(), "tau+had3") != leptons.end() ||
-          std::find(leptons.begin(), leptons.end(), "tau-had10") != leptons.end() ||
-          std::find(leptons.begin(), leptons.end(), "tau-had1") != leptons.end() ||
-          std::find(leptons.begin(), leptons.end(), "tau-had30") != leptons.end() ||
-          std::find(leptons.begin(), leptons.end(), "tau-had3") != leptons.end() )
-        ) continue;
-      gen_had_taus.push_back(&genparticle);
-      bGenHadTau_pt.push_back(genparticle.pt());
-      bGenHadTau_m.push_back(genparticle.mass());
-      bGenHadTau_phi.push_back(genparticle.phi());
-      bGenHadTau_eta.push_back(genparticle.eta());
-      bGenHadTau_status.push_back(genparticle.status());
-    }
-  }  
-  bnGenZ = gen_zs.size();
-  bnGenMuon = gen_muons.size();
-  bnGenTau = gen_taus.size();
-  bnGenHadTau = gen_had_taus.size();
-
-  // gen cutflow 
-  for (const reco::GenParticle* gen_muon : gen_muons) {
-    if (gen_muon->pt() > 19 && fabs(gen_muon->eta()) < 2.1) bgenpassMuon = true;
-  }
-  for (const reco::GenParticle* gen_tau : gen_taus) {
-    if (gen_tau->pt() > 20 && fabs(gen_tau->eta()) < 2.3) bgenpassTauCand = true;
-  }
-  if (bgenpassMuon && bgenpassTauCand) bgenpassTauAndMuon = true; 
-  for (const reco::GenParticle* gen_muon : gen_muons) {
-    for (const reco::GenParticle* gen_tau : gen_taus) {
-      if (!(gen_muon->pt() > 19 && fabs(gen_muon->eta()) < 2.1)) continue;
-      if (!(gen_tau->pt() > 20 && fabs(gen_tau->eta()) < 2.3)) continue;
-      if (gen_muon->charge() * gen_tau->charge() < 0 &&
-          reco::deltaR(gen_muon->eta(),gen_muon->phi(),gen_tau->eta(),gen_tau->phi()) > 0.5) bgenpassTauMuonPair = true;
-    }
+  // debug: verify both accessors for muon tag are equivilant
+  for (const pat::Muon &muon : *muons) {
+    if ( muon.isGlobalMuon() != muon.muonID("AllGlobalMuons") )
+      std::cout << "disagree global: " << muon.isGlobalMuon() << ", " << muon.muonID("AllGlobalMuons") << std::endl;
+    if ( muon.isTrackerMuon() != muon.muonID("AllTrackerMuons") )
+      std::cout << "diagree tracker: " << muon.isTrackerMuon() << ", " << muon.muonID("AllTrackerMuons") << std::endl; 
   }
 
   // muons
@@ -539,54 +423,39 @@ ZtoTauHadTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
   for (const pat::Muon &muon : *muons) {
     if (muon.pt() > 19.0 &&
         fabs(muon.eta()) < 2.1 &&
-        (muon.chargedHadronIso() + muon.neutralHadronIso() + muon.photonIso())/muon.pt() - 0.5 * (*rho) < 0.1 &&
+        //(muon.chargedHadronIso() + muon.neutralHadronIso() + muon.photonIso())/muon.pt() - 0.5 * (*rho) < 0.1 &&
+        (muon.chargedHadronIso() + muon.neutralHadronIso() + muon.photonIso())/muon.pt() < 0.1 &&
         muon.muonBestTrack()->dz(PV.position()) < 0.2 &&
         abs(muon.muonBestTrack()->dxy(PV.position())) < 0.045 &&
-        muon.isMediumMuon()
-        )
+        muon.isMediumMuon() )
       passedMuons.push_back(&muon);
-  }
-  // muon branches
-  bnMuon = passedMuons.size();
-  for(const pat::Muon * muon : passedMuons) {
-    double closest_gentau_dr = 99.9;
-    for (unsigned int i = 0; i < genparticles->size(); i++) {
-      const reco::GenParticle & genparticle = (*genparticles)[i];
-      if (abs(genparticle.pdgId()) != 15) continue;
-      double deltaR = reco::deltaR(genparticle.eta(),genparticle.phi(),muon->eta(),muon->phi());
-      if (deltaR < closest_gentau_dr) closest_gentau_dr = deltaR;
-    }
-    bMuon_genTau_dR.push_back(closest_gentau_dr);
   }
 
   // extra lepton veto
-  bool skip = false;
-  bool weakMuon = false;
+  bool skipped_one_passing_muon = false;
+  bool extraMuon = false;
   for (const pat::Muon &muon : *muons) {
     if (muon.pt() > 10.0 &&
         fabs(muon.eta()) < 2.4 &&
-        (muon.chargedHadronIso() + muon.neutralHadronIso() + muon.photonIso())/muon.pt() - 0.5 * (*rho) < 0.3 &&
+        //(muon.chargedHadronIso() + muon.neutralHadronIso() + muon.photonIso())/muon.pt() - 0.5 * (*rho) < 0.3 &&
+        (muon.chargedHadronIso() + muon.neutralHadronIso() + muon.photonIso())/muon.pt() < 0.3 &&
         muon.muonBestTrack()->dz(PV.position()) < 0.2 &&
         abs(muon.muonBestTrack()->dxy(PV.position())) < 0.045 &&
-        muon.isMediumMuon()
-        ) {
-
+        muon.isMediumMuon() ) {
       if (muon.pt() > 19.0 &&
           fabs(muon.eta()) < 2.1 &&
-          (muon.chargedHadronIso() + muon.neutralHadronIso() + muon.photonIso())/muon.pt() - 0.5 * (*rho) < 0.1 &&
+          //(muon.chargedHadronIso() + muon.neutralHadronIso() + muon.photonIso())/muon.pt() - 0.5 * (*rho) < 0.1 &&
+          (muon.chargedHadronIso() + muon.neutralHadronIso() + muon.photonIso())/muon.pt() < 0.1 &&
           muon.muonBestTrack()->dz(PV.position()) < 0.2 &&
           abs(muon.muonBestTrack()->dxy(PV.position())) < 0.045 &&
-          muon.isMediumMuon()
-          ) {
-        if (skip) weakMuon = true;
-        if (!skip) skip = true;
+          muon.isMediumMuon() ) {
+        if (skipped_one_passing_muon) extraMuon = true;
+        if (!skipped_one_passing_muon) skipped_one_passing_muon = true;
       } else {
-        weakMuon = true;
+        extraMuon = true;
       }
     }
   }
-  bool extraMuon = false;
-  if (passedMuons.size() > 0 && weakMuon) extraMuon = true;
   bool extraElectron = false;
   for (const pat::Electron &electron : *electrons) {
     if (electron.pt() > 10.0 &&
@@ -601,10 +470,11 @@ ZtoTauHadTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
   for (const pat::Muon &muon1 : *muons) {
     for (const pat::Muon &muon2 : *muons) {
       double dR = deltaR(muon1.eta(), muon1.phi(), muon2.eta(), muon2.phi());
-      if (dR < 0.15) continue;
+      if (dR <= 0.15) continue;
       if (muon1.pt() > 15 &&
           fabs(muon1.eta()) < 2.4 &&
-          (muon1.chargedHadronIso() + muon1.neutralHadronIso() + muon1.photonIso())/muon1.pt() - 0.5 * (*rho) < 0.3 &&
+          //(muon1.chargedHadronIso() + muon1.neutralHadronIso() + muon1.photonIso())/muon1.pt() - 0.5 * (*rho) < 0.3 &&
+          (muon1.chargedHadronIso() + muon1.neutralHadronIso() + muon1.photonIso())/muon1.pt() < 0.3 &&
           muon1.muonBestTrack()->dz(PV.position()) < 0.2 &&
           abs(muon1.muonBestTrack()->dxy(PV.position())) < 0.045 &&
           muon1.isPFMuon() &&
@@ -612,22 +482,22 @@ ZtoTauHadTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
           muon1.isTrackerMuon() &&
           muon2.pt() > 15 &&
           fabs(muon2.eta()) < 2.4 &&
-          (muon2.chargedHadronIso() + muon2.neutralHadronIso() + muon2.photonIso())/muon2.pt() - 0.5 * (*rho) < 0.3 &&
+          //(muon2.chargedHadronIso() + muon2.neutralHadronIso() + muon2.photonIso())/muon2.pt() - 0.5 * (*rho) < 0.3 &&
+          (muon2.chargedHadronIso() + muon2.neutralHadronIso() + muon2.photonIso())/muon2.pt() < 0.3 &&
           muon2.muonBestTrack()->dz(PV.position()) < 0.2 &&
           abs(muon2.muonBestTrack()->dxy(PV.position())) < 0.045 &&
           muon2.isPFMuon() &&
           muon2.isGlobalMuon() &&
           muon2.isTrackerMuon() &&
-          muon1.charge() * muon2.charge() < 0
-          )
+          muon1.charge() * muon2.charge() < 0)
         diMuon = true;
     }
   }  
 
-  // tau cands and btag veto
+  // tau cands from jets and btag veto
   bool atLeastOneBTag = false;
-  vector<const pat::Jet *> tauCands;
-  vector<int> tauCandsCharge;
+  vector<const pat::Jet *> tauJetCands;
+  vector<int> tauJetCandsCharge;
   for (const pat::Jet &jet : *jets) {
     if (jet.pt() > 20 && fabs(jet.eta()) < 2.4 && jet.bDiscriminator("pfCombinedInclusiveSecondaryVertexV2BJetTags") > 0.890)
       atLeastOneBTag = true;
@@ -640,43 +510,72 @@ ZtoTauHadTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
     }
     if (jet.pt() > 20.0 &&
         fabs(jet.eta()) < 2.3 &&
-        noNearbyGlobalMuon
-        ) {
-      double max_pt = 0;
+        noNearbyGlobalMuon) {
+      double leading_track_pt = 0;
       int leading_track_charge = 0;
       for (unsigned int i = 0; i < jet.numberOfDaughters(); i++) {
         if (jet.daughter(i)->pdgId() == 22 || jet.daughter(i)->pdgId() == 111) continue;
-        if (jet.daughter(i)->pt() > max_pt) {
-          max_pt = jet.daughter(i)->pt();
+        if (jet.daughter(i)->pt() > leading_track_pt) {
+          leading_track_pt = jet.daughter(i)->pt();
           leading_track_charge = jet.daughter(i)->charge();
         }
       }
-      if (max_pt > 5.0)
-        tauCands.push_back(&jet);
-        tauCandsCharge.push_back(leading_track_charge);
+      if (leading_track_pt > 5.0)
+        tauJetCands.push_back(&jet);
+        tauJetCandsCharge.push_back(leading_track_charge);
     }
-  }
-  // tau cand branches
-  bnTauCand = tauCands.size();
-  for (const pat::Jet* tau : tauCands) {
-    double closest_gentau_dr = 99.9;
-    for (unsigned int i = 0; i < genparticles->size(); i++) {
-      const reco::GenParticle & genparticle = (*genparticles)[i];
-      if (abs(genparticle.pdgId()) != 15) continue;
-      double deltaR = reco::deltaR(genparticle.eta(),genparticle.phi(),tau->eta(),tau->phi());
-      if (deltaR < closest_gentau_dr) closest_gentau_dr = deltaR;
-    }
-    bTauCand_genTau_dR.push_back(closest_gentau_dr);
   }
 
-  // find singel candidate tau-muon system
+  // tau cands from tau collection
+  vector<const pat::Tau *> tauCands;
+  for (const pat::Tau &tau : *taus) {
+    bool noNearbyGlobalMuon = true;
+    for (const pat::Muon &muon : *muons) {
+      if (muon.pt() < 5) continue; 
+      if (!muon.isGlobalMuon()) continue;
+      double deltaR = reco::deltaR(muon.eta(),muon.phi(),tau.eta(),tau.phi());
+      if (deltaR < 0.4) noNearbyGlobalMuon = false;
+    }
+    double leading_track_pt = (tau.leadChargedHadrCand())->pt();
+
+    if (tau.pt() > 20.0 &&
+        fabs(tau.eta()) < 2.3 &&
+        noNearbyGlobalMuon &&
+        tau.tauID("againstMuonTight3") == 1 &&
+        tau.tauID("againstElectronVLooseMVA6") == 1 &&
+        leading_track_pt > 5.0)
+          tauCands.push_back(&tau);
+  }
+
+  // choose single taujet-muon system
+  int muon_jet_index = -1;
+  int tau_jet_index = -1;
+  for (unsigned int i = 0; i < passedMuons.size(); i++) {
+    for (unsigned int j = 0; j < tauJetCands.size(); j++) {
+      const pat::Muon & muon = *passedMuons[i];
+      const pat::Jet & tau = *tauJetCands[j];
+      int tau_charge = tauJetCandsCharge[j];
+      double dR = reco::deltaR(muon.eta(),muon.phi(),tau.eta(),tau.phi());
+      int charge = muon.charge() * tau_charge;
+      if (dR < 0.5) continue;
+      if (charge > 0) continue;
+      if (muon_jet_index == -1) {
+        muon_jet_index = i;
+        tau_jet_index = j; }
+      else if (passedMuons[i]->pt() + tauJetCands[j]->pt() > passedMuons[muon_jet_index]->pt() + tauJetCands[tau_jet_index]->pt()) {
+        muon_jet_index = i;
+        tau_jet_index = j; }
+    }
+  }
+
+  // choose single tau-muon system
   int muon_index = -1;
   int tau_index = -1;
   for (unsigned int i = 0; i < passedMuons.size(); i++) {
     for (unsigned int j = 0; j < tauCands.size(); j++) {
       const pat::Muon & muon = *passedMuons[i];
-      const pat::Jet & tau = *tauCands[j];
-      int tau_charge = tauCandsCharge[j];
+      const pat::Tau & tau = *tauCands[j];
+      int tau_charge = tau.charge();
       double dR = reco::deltaR(muon.eta(),muon.phi(),tau.eta(),tau.phi());
       int charge = muon.charge() * tau_charge;
       if (dR < 0.5) continue;
@@ -690,64 +589,137 @@ ZtoTauHadTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
     }
   }
   
-  // filter descision
-  
-  // at least one muon and one tau cand
-  if (bnMuon > 0) bpassMuon = true;
-  if (bnTauCand > 0) bpassTauCand = true;
-  if (bnMuon > 0 && bnTauCand > 0) bpassTauAndMuon = true;
-  if (muon_index != -1 && tau_index != -1) bpassTauMuonPair = true;
+  // filter decision
+  bool passTauMuonPair = false;
+  bool passDR = false;
+  bool passMT = false;
+  bool passPzeta = false;
+  bool passExtraLep = false;
+  bool passBTag = false;
 
-  // tau-muon system: dR, opp sign, MT, Pzeta
-  if (muon_index != -1 && tau_index != -1) {
-    bpassTauMuonPair = true;
-    const pat::Muon & theMuon = *passedMuons[muon_index];
-    const pat::Jet & theTau = *tauCands[tau_index];
-    int tau_charge = tauCandsCharge[tau_index];
 
-    double dPhi = theMuon.phi() - MET.phi();
-    double MT = sqrt(2 * theMuon.pt() * MET.pt() * (1 - cos(dPhi)));    
-    TVector2 pTmuon;
-    pTmuon.SetMagPhi(theMuon.pt(), theMuon.phi());  
-    TVector2 pTtau;
-    pTtau.SetMagPhi(theTau.pt(), theTau.phi());  
-    TVector2 pTmet;
-    pTmet.SetMagPhi(MET.pt(), MET.phi());  
-    TVector2 zeta;
-    zeta.SetMagPhi(1.0, (theMuon.phi()-theTau.phi())/2.0 + theTau.phi());
-    double PzetaAll = zeta * (pTmuon + pTtau + pTmet);
-    double PzetaVis = zeta * (pTmuon + pTtau);
-    double Pzeta = PzetaAll - 0.85 * PzetaVis;
+  if (cfg_tauObjs) {  
+    // at least one muon and one tau cand
+    if (muon_index != -1 && tau_index != -1) passTauMuonPair = true;
 
-    if (reco::deltaR(theMuon.eta(), theMuon.phi(), theTau.eta(), theTau.phi()) > 0.5) bpassDR = true;
-    if (theMuon.charge() * tau_charge < 0) bpassOppSign = true;
-    if (MT < 40) bpassMT = true;
-    if (Pzeta > -25) bpassPzeta = true;
+    // tau-muon system: dR, opp sign, MT, Pzeta
+    if (passTauMuonPair) {
+      const pat::Muon & theMuon = *passedMuons[muon_index];
+      const pat::Tau & theTau = *tauCands[tau_index];
+
+      double dPhi = theMuon.phi() - MET.phi();
+      double MT = sqrt(2 * theMuon.pt() * MET.pt() * (1 - cos(dPhi)));    
+      TVector2 pTmuon;
+      pTmuon.SetMagPhi(theMuon.pt(), theMuon.phi());  
+      TVector2 pTtau;
+      pTtau.SetMagPhi(theTau.pt(), theTau.phi());  
+      TVector2 pTmet;
+      pTmet.SetMagPhi(MET.pt(), MET.phi());  
+      TVector2 zeta;
+      zeta.SetMagPhi(1.0, (theMuon.phi()-theTau.phi())/2.0 + theTau.phi());
+      double PzetaAll = zeta * (pTmuon + pTtau + pTmet);
+      double PzetaVis = zeta * (pTmuon + pTtau);
+      double Pzeta = PzetaAll - 0.85 * PzetaVis;
+
+      if (reco::deltaR(theMuon.eta(), theMuon.phi(), theTau.eta(), theTau.phi()) > 0.5) passDR = true;
+      if (MT < 40) passMT = true;
+      if (Pzeta > -25) passPzeta = true;
+    }
+  } else {
+    // at least one muon and one tau cand
+    if (muon_jet_index != -1 && tau_jet_index != -1) passTauMuonPair = true;
+
+    // tau-muon system: dR, opp sign, MT, Pzeta
+    if (passTauMuonPair) {
+      const pat::Muon & theMuon = *passedMuons[muon_jet_index];
+      const pat::Jet & theTau = *tauJetCands[tau_jet_index];
+
+      double dPhi = theMuon.phi() - MET.phi();
+      double MT = sqrt(2 * theMuon.pt() * MET.pt() * (1 - cos(dPhi)));    
+      TVector2 pTmuon;
+      pTmuon.SetMagPhi(theMuon.pt(), theMuon.phi());  
+      TVector2 pTtau;
+      pTtau.SetMagPhi(theTau.pt(), theTau.phi());  
+      TVector2 pTmet;
+      pTmet.SetMagPhi(MET.pt(), MET.phi());  
+      TVector2 zeta;
+      zeta.SetMagPhi(1.0, (theMuon.phi()-theTau.phi())/2.0 + theTau.phi());
+      double PzetaAll = zeta * (pTmuon + pTtau + pTmet);
+      double PzetaVis = zeta * (pTmuon + pTtau);
+      double Pzeta = PzetaAll - 0.85 * PzetaVis;
+
+      if (reco::deltaR(theMuon.eta(), theMuon.phi(), theTau.eta(), theTau.phi()) > 0.5) passDR = true;
+      if (MT < 40) passMT = true;
+      if (Pzeta > -25) passPzeta = true;
+    }
   }
 
   // extra lepton veto
-  bpassExtraMuon = !extraMuon;
-  bpassExtraElec = !extraElectron;
-  bpassDiMuon = !diMuon;
-  if (!extraMuon && !extraElectron && !diMuon) bpassExtraLep = true;
+  if (!extraMuon && !extraElectron && !diMuon) passExtraLep = true;
 
   // btag veto
-  if (!atLeastOneBTag) bpassBTag = true;
+  if (!atLeastOneBTag) passBTag = true;
 
-  // filter decision
-  bpassAll = bpassTauMuonPair && bpassDR && bpassOppSign && bpassMT && bpassPzeta && bpassExtraLep && bpassBTag;
+  // final filter decision
+  bool passAll = passTauMuonPair && passDR && passMT && passPzeta && passExtraLep && passBTag;
+
+  // cutflow branches
+  bpassMuon = (passedMuons.size() > 0);
+  if (!cfg_tauObjs)  bpassTauCand = (tauJetCands.size() > 0);
+  else bpassTauCand = (tauCands.size() > 0);
+  bpassTauMuonPair = passTauMuonPair;
+  bpassDR = passDR;
+  bpassMT = passMT;
+  bpassPzeta = passPzeta;
+  bpassExtraLep = passExtraLep;
+  bpassBTag = passBTag;
+  bpassAll = passAll;
+
+  // visible mass reconstruction
+  if (passAll && cfg_tauObjs) {
+      const pat::Muon & theMuon = *passedMuons[muon_index];
+      const pat::Tau & theTau = *tauCands[tau_index];
+      TLorentzVector muon_mom; muon_mom.SetPtEtaPhiM(theMuon.pt(), theMuon.eta(), theMuon.phi(), theMuon.mass());
+      TLorentzVector tau_mom; tau_mom.SetPtEtaPhiM(theTau.pt(), theTau.eta(), theTau.phi(), theTau.mass());
+      TLorentzVector Z_visible;
+      Z_visible = muon_mom + tau_mom;
+      bmVis = Z_visible.M();
+      // reco branches
+      bnMuoncands = passedMuons.size();
+      bnTaucands = tauCands.size();
+      for(const pat::Muon* mu : passedMuons) {
+        bmuoncand_pt.push_back(mu->pt());
+      }
+      for(const pat::Tau* tau : tauCands) {
+        btaucand_pt.push_back(tau->pt());
+      }
+      bmuonIndex = muon_index;
+      btauIndex = tau_index;
+  }
+  if (passAll && !cfg_tauObjs) {
+      const pat::Muon & theMuon = *passedMuons[muon_jet_index];
+      const pat::Jet & theTau = *tauJetCands[tau_jet_index];
+      TLorentzVector muon_mom; muon_mom.SetPtEtaPhiM(theMuon.pt(), theMuon.eta(), theMuon.phi(), theMuon.mass());
+      TLorentzVector tau_mom; tau_mom.SetPtEtaPhiM(theTau.pt(), theTau.eta(), theTau.phi(), theTau.mass());
+      TLorentzVector Z_visible;
+      Z_visible = muon_mom + tau_mom;
+      bmVis = Z_visible.M();
+      // reco branches
+      bnMuoncands = passedMuons.size();
+      bnTaucands = tauJetCands.size();
+      for(const pat::Muon* mu : passedMuons) {
+        bmuoncand_pt.push_back(mu->pt());
+      }
+      for(const pat::Jet* tau : tauJetCands) {
+        btaucand_pt.push_back(tau->pt());
+      }
+      bmuonIndex = muon_index;
+      btauIndex = tau_jet_index;
+  }
+
 
   // fill tree
   tree_->Fill();
-
-  // debug: verify both accessors for muon tag are equivilant
-  for (const pat::Muon &muon : *muons) {
-    if ( muon.isGlobalMuon() != muon.muonID("AllGlobalMuons") )
-      std::cout << "disagree global: " << muon.isGlobalMuon() << ", " << muon.muonID("AllGlobalMuons") << std::endl;
-    if ( muon.isTrackerMuon() != muon.muonID("AllTrackerMuons") )
-      std::cout << "diagree tracker: " << muon.isTrackerMuon() << ", " << muon.muonID("AllTrackerMuons") << std::endl; 
-  }
-
 }
 
 bool
@@ -881,6 +853,8 @@ ZtoTauHadTreeMaker::getDecay(const reco::Candidate & genparticle, int flag)
 void
 ZtoTauHadTreeMaker::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
   edm::ParameterSetDescription desc;
+  desc.addUntracked<bool>("recoOnly", false);
+  desc.addUntracked<bool>("tauObjs", false);
   descriptions.add("ZtoTauHadTreeMakerFilter", desc);
 }
 
