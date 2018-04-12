@@ -241,6 +241,8 @@ ZtoTauHadTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
   bpassAll = false;
 
   bnGenHadTau = 0;
+  bGenTau_con_pt.clear();
+  bGenTau_con_dr.clear();
 
   bdecayType = -1;
   bmVis = -1;
