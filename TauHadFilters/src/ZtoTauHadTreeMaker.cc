@@ -423,7 +423,7 @@ ZtoTauHadTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
   // muons
   vector<const pat::Muon *> passedMuons;
   for (const pat::Muon &muon : *muons) {
-    if (muon.pt() > 19.0 &&
+    if (muon.pt() > 21.0 &&
         fabs(muon.eta()) < 2.1 &&
         //(muon.chargedHadronIso() + muon.neutralHadronIso() + muon.photonIso())/muon.pt() - 0.5 * (*rho) < 0.1 &&
         (muon.chargedHadronIso() + muon.neutralHadronIso() + muon.photonIso())/muon.pt() < 0.1 &&
