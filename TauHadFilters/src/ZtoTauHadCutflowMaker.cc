@@ -71,6 +71,7 @@ class ZtoTauHadCutflowMaker : public edm::one::EDAnalyzer<edm::one::SharedResour
 
    private:
       virtual void analyze(const edm::Event&, const edm::EventSetup&) override;
+      virtual void endJob();
 
       // Configuration Parameters
       bool cfg_tauObjs;
@@ -98,6 +99,7 @@ class ZtoTauHadCutflowMaker : public edm::one::EDAnalyzer<edm::one::SharedResour
       int brun;
       int blumi;
       // cutflow
+      int bfoundMuonTrigger;
       int bpassMuonTrigger;
       int bpassMuon;
       int bpassTauCand;
@@ -108,6 +110,21 @@ class ZtoTauHadCutflowMaker : public edm::one::EDAnalyzer<edm::one::SharedResour
       int bpassExtraLep;
       int bpassBTag;
       int bpassAll;
+      
+      // cutflow print
+      int count_events;
+      int count_foundMuonTrigger;
+      int count_passMuonTrigger;
+      int count_passMuon;
+      int count_passMuon_and_trigger;
+      int count_passTauMuonPair;
+      int count_passDR_n1;
+      int count_passMT_n1;
+      int count_passPzeta_n1;
+      int count_passExtraLep_n1;
+      int count_BTag_n1;
+      int count_passMuonTrigger_n1;
+      int count_passAll;
 };
 
 //
@@ -138,6 +155,7 @@ ZtoTauHadCutflowMaker::ZtoTauHadCutflowMaker(const edm::ParameterSet& iConfig) :
   tree_->Branch("runNum",&brun,"runNum/I");
   tree_->Branch("lumiNum",&blumi,"lumiNum/I");
   // cutflow
+  tree_->Branch("foundMuonTrigger",&bfoundMuonTrigger,"foundMuonTrigger/I");
   tree_->Branch("passMuonTrigger",&bpassMuonTrigger,"passMuonTrigger/I");
   tree_->Branch("passMuon",&bpassMuon,"passMuon/I");
   tree_->Branch("passTauCand",&bpassTauCand,"passTauCand/I");
@@ -148,6 +166,21 @@ ZtoTauHadCutflowMaker::ZtoTauHadCutflowMaker(const edm::ParameterSet& iConfig) :
   tree_->Branch("passExtraLep",&bpassExtraLep,"passExtraLep/I");
   tree_->Branch("passBTag",&bpassBTag,"passBTag/I");
   tree_->Branch("passAll",&bpassAll,"passAll/I");
+
+  // cutflow print
+  count_events = 0;
+  count_foundMuonTrigger = 0;
+  count_passMuonTrigger = 0;
+  count_passMuon = 0;
+  count_passMuon_and_trigger = 0;
+  count_passTauMuonPair = 0;
+  count_passDR_n1 = 0;
+  count_passMT_n1 = 0;
+  count_passPzeta_n1 = 0;
+  count_passExtraLep_n1 = 0;
+  count_BTag_n1 = 0;
+  count_passMuonTrigger_n1 = 0;
+  count_passAll = 0;
 }
 
 //
@@ -199,6 +232,7 @@ ZtoTauHadCutflowMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& 
   brun = iEvent.id().run();
   blumi = iEvent.id().luminosityBlock();
 
+  bfoundMuonTrigger = false;
   bpassMuonTrigger = false;
   bpassMuon = false;
   bpassTauCand = false;
@@ -235,13 +269,13 @@ ZtoTauHadCutflowMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& 
        name_muon = triggerName;
      }
   }
-  if (!found_muon) std::cout << "failed to find muon trigger!" << std::endl;
+  bfoundMuonTrigger = found_muon;
   bool passMuonTrigger = bit_muon;
 
   // muons
   vector<const pat::Muon *> passedMuons;
   for (const pat::Muon &muon : *muons) {
-    if (muon.pt() > 21.0 &&
+    if (muon.pt() > 22.0 &&
         fabs(muon.eta()) < 2.1 &&
         //(muon.chargedHadronIso() + muon.neutralHadronIso() + muon.photonIso())/muon.pt() - 0.5 * (*rho) < 0.1 &&
         (muon.chargedHadronIso() + muon.neutralHadronIso() + muon.photonIso())/muon.pt() < 0.1 &&
@@ -497,6 +531,42 @@ ZtoTauHadCutflowMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& 
 
   // fill tree
   tree_->Fill();
+
+  // cutflow print
+  count_events++;
+  if(bfoundMuonTrigger) count_foundMuonTrigger++;
+  if(bpassMuonTrigger) count_passMuonTrigger++;
+  if(bpassMuon) count_passMuon++;
+  if(bpassMuon && bpassMuonTrigger) count_passMuon_and_trigger++;
+  if(bpassTauMuonPair) count_passTauMuonPair++;
+  if(bpassAll) count_passAll++;
+  if(                   passTauMuonPair && passDR && passMT && passPzeta && passExtraLep && passBTag) count_passMuonTrigger_n1++;
+  if(passMuonTrigger && passTauMuonPair &&           passMT && passPzeta && passExtraLep && passBTag) count_passDR_n1++;
+  if(passMuonTrigger && passTauMuonPair && passDR &&           passPzeta && passExtraLep && passBTag) count_passMT_n1++;
+  if(passMuonTrigger && passTauMuonPair && passDR && passMT &&              passExtraLep && passBTag) count_passPzeta_n1++;
+  if(passMuonTrigger && passTauMuonPair && passDR && passMT && passPzeta &&                 passBTag) count_passExtraLep_n1++;
+  if(passMuonTrigger && passTauMuonPair && passDR && passMT && passPzeta && passExtraLep            ) count_BTag_n1++;
+}
+
+void
+ZtoTauHadCutflowMaker::endJob() {
+
+  // cutflow print
+  std::cout << "" << std::endl;
+  std::cout << "CUTFLOW" << std::endl;
+  std::cout << "count_events " << count_events << std::endl;
+  std::cout << "count_foundMuonTrigger " << count_foundMuonTrigger << std::endl;
+  std::cout << "count_passMuonTrigger " << count_passMuonTrigger << std::endl;
+  std::cout << "count_passMuon " << count_passMuon << std::endl;
+  std::cout << "count_passMuon_and_trigger " << count_passMuon_and_trigger << std::endl;
+  std::cout << "count_passTauMuonPair " << count_passTauMuonPair << std::endl;
+  std::cout << "count_passDR_n1 " << count_passDR_n1 << std::endl;
+  std::cout << "count_passMT_n1 " << count_passMT_n1 << std::endl;
+  std::cout << "count_passPzeta_n1 " << count_passPzeta_n1 << std::endl;
+  std::cout << "count_passExtraLep_n1 " << count_passExtraLep_n1 << std::endl;
+  std::cout << "count_BTag_n1 " << count_BTag_n1 << std::endl;
+  std::cout << "count_passMuonTrigger_n1 " << count_passMuonTrigger_n1 << std::endl;
+  std::cout << "count_passAll " << count_passAll << std::endl;
 }
 
 void
