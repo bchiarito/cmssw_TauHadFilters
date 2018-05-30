@@ -271,7 +271,7 @@ ZtoTauHadRecoSelector::filter(edm::Event& iEvent, const edm::EventSetup& iSetup)
   vector<const pat::Jet *> tauJetCands;
   vector<int> tauJetCandsCharge;
   for (const pat::Jet &jet : *jets) {
-    if (jet.pt() > 20 && fabs(jet.eta()) < 2.4 && jet.bDiscriminator("pfCombinedInclusiveSecondaryVertexV2BJetTags") > 0.890)
+    if (jet.pt() > 20 && fabs(jet.eta()) < 2.4 && jet.bDiscriminator("pfCombinedInclusiveSecondaryVertexV2BJetTags") > 0.8484)
       atLeastOneBTag = true;
     bool noNearbyGlobalMuon = true;
     for (const pat::Muon &muon : *muons) {
