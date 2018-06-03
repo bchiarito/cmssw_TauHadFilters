@@ -75,6 +75,7 @@ class ZtoTauHadCutflowMaker : public edm::one::EDAnalyzer<edm::one::SharedResour
 
       // Configuration Parameters
       bool cfg_tauObjs;
+      double cfg_isoCut;
 
       // EDM Collection lables
       edm::EDGetTokenT<edm::TriggerResults> triggerBits_;
@@ -116,7 +117,11 @@ class ZtoTauHadCutflowMaker : public edm::one::EDAnalyzer<edm::one::SharedResour
       int count_foundMuonTrigger;
       int count_passMuonTrigger;
       int count_passMuon;
+      int count_passMuon_barrel;
+      int count_passMuon_endcap;
       int count_passMuon_and_trigger;
+      int count_passMuon_and_trigger_barrel;
+      int count_passMuon_and_trigger_endcap;
       int count_passTauMuonPair;
       int count_passDR_n1;
       int count_passMT_n1;
@@ -131,7 +136,8 @@ class ZtoTauHadCutflowMaker : public edm::one::EDAnalyzer<edm::one::SharedResour
 // constructors
 //
 ZtoTauHadCutflowMaker::ZtoTauHadCutflowMaker(const edm::ParameterSet& iConfig) :
-  cfg_tauObjs(iConfig.getUntrackedParameter<bool>("tauObjs"))
+  cfg_tauObjs(iConfig.getUntrackedParameter<bool>("tauObjs")),
+  cfg_isoCut(iConfig.getUntrackedParameter<double>("isoCut"))
 {
   triggerBits_ = consumes<edm::TriggerResults>( edm::InputTag("TriggerResults","","HLT") );
   triggerObjects_ = consumes<pat::TriggerObjectStandAloneCollection>( edm::InputTag("selectedPatTrigger") );
@@ -172,7 +178,11 @@ ZtoTauHadCutflowMaker::ZtoTauHadCutflowMaker(const edm::ParameterSet& iConfig) :
   count_foundMuonTrigger = 0;
   count_passMuonTrigger = 0;
   count_passMuon = 0;
+  count_passMuon_barrel = 0;
+  count_passMuon_endcap = 0;
   count_passMuon_and_trigger = 0;
+  count_passMuon_and_trigger_barrel = 0;
+  count_passMuon_and_trigger_endcap = 0;
   count_passTauMuonPair = 0;
   count_passDR_n1 = 0;
   count_passMT_n1 = 0;
@@ -278,7 +288,7 @@ ZtoTauHadCutflowMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& 
     if (muon.pt() > 22.0 &&
         fabs(muon.eta()) < 2.1 &&
         //(muon.chargedHadronIso() + muon.neutralHadronIso() + muon.photonIso())/muon.pt() - 0.5 * (*rho) < 0.1 &&
-        (muon.chargedHadronIso() + muon.neutralHadronIso() + muon.photonIso())/muon.pt() < 0.1 &&
+        (muon.chargedHadronIso() + muon.neutralHadronIso() + muon.photonIso())/muon.pt() < cfg_isoCut &&
         muon.muonBestTrack()->dz(PV.position()) < 0.2 &&
         abs(muon.muonBestTrack()->dxy(PV.position())) < 0.045 &&
         muon.isMediumMuon() )
@@ -513,6 +523,16 @@ ZtoTauHadCutflowMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& 
   // btag veto
   if (!atLeastOneBTag) passBTag = true;
 
+  // barrel vs endcap muon if pass
+  bool muonIsBarrel = false;
+  bool muonIsEndcap = false;
+  if (muon_index != -1 ) {
+    const pat::Muon & theMuon = *passedMuons[muon_index];
+    double eta = theMuon.eta();
+    if (eta < 1.479) muonIsBarrel = true; 
+    else muonIsEndcap = true;
+  }
+
   // final filter decision
   bool passAll = passMuonTrigger && passTauMuonPair && passDR && passMT && passPzeta && passExtraLep && passBTag;
 
@@ -537,7 +557,11 @@ ZtoTauHadCutflowMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& 
   if(bfoundMuonTrigger) count_foundMuonTrigger++;
   if(bpassMuonTrigger) count_passMuonTrigger++;
   if(bpassMuon) count_passMuon++;
+  if(bpassMuon && muonIsBarrel) count_passMuon_barrel++;
+  if(bpassMuon && muonIsEndcap) count_passMuon_endcap++;
   if(bpassMuon && bpassMuonTrigger) count_passMuon_and_trigger++;
+  if(bpassMuon && bpassMuonTrigger && muonIsBarrel) count_passMuon_and_trigger_barrel++;
+  if(bpassMuon && bpassMuonTrigger && muonIsEndcap) count_passMuon_and_trigger_endcap++;
   if(bpassTauMuonPair) count_passTauMuonPair++;
   if(bpassAll) count_passAll++;
   if(                   passTauMuonPair && passDR && passMT && passPzeta && passExtraLep && passBTag) count_passMuonTrigger_n1++;
@@ -549,8 +573,8 @@ ZtoTauHadCutflowMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& 
 }
 
 void
-ZtoTauHadCutflowMaker::endJob() {
-
+ZtoTauHadCutflowMaker::endJob()
+{
   // cutflow print
   std::cout << "" << std::endl;
   std::cout << "CUTFLOW" << std::endl;
@@ -558,7 +582,11 @@ ZtoTauHadCutflowMaker::endJob() {
   std::cout << "count_foundMuonTrigger " << count_foundMuonTrigger << std::endl;
   std::cout << "count_passMuonTrigger " << count_passMuonTrigger << std::endl;
   std::cout << "count_passMuon " << count_passMuon << std::endl;
+  std::cout << "count_passMuon_barrel " << count_passMuon_barrel << std::endl;
+  std::cout << "count_passMuon_endcap " << count_passMuon_endcap << std::endl;
   std::cout << "count_passMuon_and_trigger " << count_passMuon_and_trigger << std::endl;
+  std::cout << "count_passMuon_and_trigger_barrel " << count_passMuon_and_trigger_barrel << std::endl;
+  std::cout << "count_passMuon_and_trigger_endcap " << count_passMuon_and_trigger_endcap << std::endl;
   std::cout << "count_passTauMuonPair " << count_passTauMuonPair << std::endl;
   std::cout << "count_passDR_n1 " << count_passDR_n1 << std::endl;
   std::cout << "count_passMT_n1 " << count_passMT_n1 << std::endl;
@@ -573,6 +601,7 @@ void
 ZtoTauHadCutflowMaker::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
   edm::ParameterSetDescription desc;
   desc.addUntracked<bool>("tauObjs", false);
+  desc.addUntracked<double>("isoCut", 0.1);
   descriptions.add("ZtoTauHadCutflowMakerFilter", desc);
 }
 

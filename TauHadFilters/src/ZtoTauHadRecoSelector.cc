@@ -78,6 +78,7 @@ class ZtoTauHadRecoSelector : public edm::stream::EDFilter<> {
 
       // Configuration Parameters
       bool cfg_tauObjs;
+      bool cfg_isoCut;
 
       // Parameters
       edm::EDGetTokenT<edm::TriggerResults> triggerBits_;
@@ -100,7 +101,8 @@ class ZtoTauHadRecoSelector : public edm::stream::EDFilter<> {
 // constructors
 //
 ZtoTauHadRecoSelector::ZtoTauHadRecoSelector(const edm::ParameterSet& iConfig) :
-  cfg_tauObjs(iConfig.getUntrackedParameter<bool>("tauObjs"))
+  cfg_tauObjs(iConfig.getUntrackedParameter<bool>("tauObjs")),
+  cfg_isoCut(iConfig.getUntrackedParameter<double>("isoCut"))
 {
   triggerBits_ = consumes<edm::TriggerResults>( edm::InputTag("TriggerResults","","HLT") );
   triggerObjects_ = consumes<pat::TriggerObjectStandAloneCollection>( edm::InputTag("selectedPatTrigger") );
@@ -196,7 +198,7 @@ ZtoTauHadRecoSelector::filter(edm::Event& iEvent, const edm::EventSetup& iSetup)
     if (muon.pt() > 21.0 &&
         fabs(muon.eta()) < 2.1 &&
         //(muon.chargedHadronIso() + muon.neutralHadronIso() + muon.photonIso())/muon.pt() - 0.5 * (*rho) < 0.1 &&
-        (muon.chargedHadronIso() + muon.neutralHadronIso() + muon.photonIso())/muon.pt() < 0.1 &&
+        (muon.chargedHadronIso() + muon.neutralHadronIso() + muon.photonIso())/muon.pt() < cfg_isoCut &&
         muon.muonBestTrack()->dz(PV.position()) < 0.2 &&
         abs(muon.muonBestTrack()->dxy(PV.position())) < 0.045 &&
         muon.isMediumMuon() )
@@ -467,6 +469,7 @@ void
 ZtoTauHadRecoSelector::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
   edm::ParameterSetDescription desc;
   desc.addUntracked<bool>("tauObjs", false);
+  desc.addUntracked<bool>("isoCut", 0.1);
   descriptions.add("ZtoTauHadRecoSelectorFilter", desc);
 }
 
