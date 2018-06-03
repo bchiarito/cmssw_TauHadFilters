@@ -526,9 +526,16 @@ ZtoTauHadCutflowMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& 
   // barrel vs endcap muon if pass
   bool muonIsBarrel = false;
   bool muonIsEndcap = false;
-  if (muon_index != -1 ) {
-    const pat::Muon & theMuon = *passedMuons[muon_index];
-    double eta = theMuon.eta();
+  if (passedMuons.size() > 0 ) {
+
+    const pat::Muon * poorestIsoMuon = passedMuons[0];
+    double lowestIso = 2.0;
+    for (const pat::Muon &muon : *muons) {
+      double iso = (muon.chargedHadronIso() + muon.neutralHadronIso() + muon.photonIso())/muon.pt();
+      if (iso < lowestIso) lowestIso = iso; poorestIsoMuon = &muon;
+    }
+
+    double eta = poorestIsoMuon->eta();
     if (eta < 1.479) muonIsBarrel = true; 
     else muonIsEndcap = true;
   }
