@@ -469,7 +469,7 @@ void
 ZtoTauHadRecoSelector::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
   edm::ParameterSetDescription desc;
   desc.addUntracked<bool>("tauObjs", false);
-  desc.addUntracked<bool>("isoCut", 0.1);
+  desc.addUntracked<double>("isoCut", 0.1);
   descriptions.add("ZtoTauHadRecoSelectorFilter", desc);
 }
 
