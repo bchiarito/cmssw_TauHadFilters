@@ -5,7 +5,7 @@ process.load("SimGeneral.HepPDTESSource.pythiapdt_cfi")
 process.load("FWCore.MessageService.MessageLogger_cfi")
 process.options = cms.untracked.PSet( wantSummary = cms.untracked.bool(False) )
 
-process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(100000) )
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(10) )
 process.MessageLogger.cerr.FwkReport.reportEvery = 100
 
 process.source = cms.Source("PoolSource", fileNames = cms.untracked.vstring(
@@ -15,13 +15,7 @@ process.source = cms.Source("PoolSource", fileNames = cms.untracked.vstring(
   ))
 
 process.filt = cms.EDFilter('ZtoTauHadRecoSelector',
+  dumpCutflow = cms.untracked.bool(True)
   )
 
-process.TFileService = cms.Service("TFileService", fileName = cms.string( "tree.root" ) )
-
-process.tree = cms.EDAnalyzer('ZtoTauHadTreeMaker',
-  recoOnly = cms.untracked.bool(False),
-  tauObjs = cms.untracked.bool(False)
-  )
-
-process.p = cms.Path(process.filt * process.tree)
+process.p = cms.Path(process.filt)

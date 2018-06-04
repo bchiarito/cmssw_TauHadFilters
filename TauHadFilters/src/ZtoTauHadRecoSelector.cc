@@ -21,6 +21,7 @@
 #include <iostream>
 // ROOT includes
 #include "TVector2.h"
+#include "TLorentzVector.h"
 #include "TH1.h"
 #include "TTree.h"
 // cmssw framework includes
@@ -34,6 +35,12 @@
 #include "CommonTools/UtilAlgos/interface/TFileService.h"
 #include "FWCore/ParameterSet/interface/ConfigurationDescriptions.h"
 #include "FWCore/ParameterSet/interface/ParameterSetDescription.h"
+// trigger inlcudes
+#include "DataFormats/Math/interface/deltaR.h"
+#include "FWCore/Common/interface/TriggerNames.h"
+#include "DataFormats/Common/interface/TriggerResults.h"
+#include "DataFormats/PatCandidates/interface/TriggerObjectStandAlone.h"
+#include "DataFormats/PatCandidates/interface/PackedTriggerPrescales.h"
 // pat includes
 #include "DataFormats/VertexReco/interface/VertexFwd.h"
 #include "DataFormats/VertexReco/interface/Vertex.h"
@@ -44,43 +51,40 @@
 #include "DataFormats/PatCandidates/interface/Jet.h"
 #include "DataFormats/PatCandidates/interface/MET.h"
 #include "DataFormats/PatCandidates/interface/PackedCandidate.h"
-// trigger inlcudes
-#include "DataFormats/Math/interface/deltaR.h"
-#include "FWCore/Common/interface/TriggerNames.h"
-#include "DataFormats/Common/interface/TriggerResults.h"
-#include "DataFormats/PatCandidates/interface/TriggerObjectStandAlone.h"
-#include "DataFormats/PatCandidates/interface/PackedTriggerPrescales.h"
 // edm utilities includes
 #include "DataFormats/Math/interface/deltaR.h"
 
 // namesspace defaults
 using std::vector;
 using std::string;
+using std::cout;
+using std::endl;
 
 //
 // class declaration
 //
-class ZtoTauHadRecoSelector : public edm::stream::EDFilter<> {
+class ZtoTauHadRecoSelector : public edm::EDFilter {
    public:
       explicit ZtoTauHadRecoSelector(const edm::ParameterSet&);
       ~ZtoTauHadRecoSelector();
       static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
 
    private:
-      virtual void beginStream(edm::StreamID) override;
       virtual bool filter(edm::Event&, const edm::EventSetup&) override;
-      virtual void endStream() override;
+
+      virtual void beginJob() override;
+      virtual void endJob() override;
       virtual void beginRun(edm::Run const&, edm::EventSetup const&) override;
       virtual void endRun(edm::Run const&, edm::EventSetup const&) override;
       virtual void beginLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&) override;
       virtual void endLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&) override;
 
-
       // Configuration Parameters
       bool cfg_tauObjs;
-      bool cfg_isoCut;
+      bool cfg_dumpCutflow;
+      double cfg_isoCut;
 
-      // Parameters
+      // EDM Collection lables
       edm::EDGetTokenT<edm::TriggerResults> triggerBits_;
       edm::EDGetTokenT<pat::TriggerObjectStandAloneCollection> triggerObjects_;
       edm::EDGetTokenT<pat::PackedTriggerPrescales> triggerPrescales_;
@@ -95,6 +99,25 @@ class ZtoTauHadRecoSelector : public edm::stream::EDFilter<> {
       edm::EDGetTokenT<pat::PackedCandidateCollection> pfcandsToken_;
       edm::EDGetTokenT<reco::BeamSpot> beamToken_;
       edm::EDGetTokenT<double> rhoToken_;
+
+      // cutflow print
+      int count_events;
+      int count_foundMuonTrigger;
+      int count_passMuonTrigger;
+      int count_passMuon;
+      int count_passMuon_barrel;
+      int count_passMuon_endcap;
+      int count_passMuon_and_trigger;
+      int count_passMuon_and_trigger_barrel;
+      int count_passMuon_and_trigger_endcap;
+      int count_passTauMuonPair;
+      int count_passDR_n1;
+      int count_passMT_n1;
+      int count_passPzeta_n1;
+      int count_passExtraLep_n1;
+      int count_BTag_n1;
+      int count_passMuonTrigger_n1;
+      int count_passAll;
 };
 
 //
@@ -102,6 +125,7 @@ class ZtoTauHadRecoSelector : public edm::stream::EDFilter<> {
 //
 ZtoTauHadRecoSelector::ZtoTauHadRecoSelector(const edm::ParameterSet& iConfig) :
   cfg_tauObjs(iConfig.getUntrackedParameter<bool>("tauObjs")),
+  cfg_dumpCutflow(iConfig.getUntrackedParameter<bool>("dumpCutflow")),
   cfg_isoCut(iConfig.getUntrackedParameter<double>("isoCut"))
 {
   triggerBits_ = consumes<edm::TriggerResults>( edm::InputTag("TriggerResults","","HLT") );
@@ -118,6 +142,25 @@ ZtoTauHadRecoSelector::ZtoTauHadRecoSelector(const edm::ParameterSet& iConfig) :
   pfcandsToken_ = consumes<pat::PackedCandidateCollection>(edm::InputTag("packedPFCandidates"));
   beamToken_ = consumes<reco::BeamSpot>(edm::InputTag("offlineBeamSpot"));
   rhoToken_ = consumes<double>(edm::InputTag("fixedGridRhoFastjetCentralChargedPileUp"));
+
+  // cutflow print
+  count_events = 0;
+  count_foundMuonTrigger = 0;
+  count_passMuonTrigger = 0;
+  count_passMuon = 0;
+  count_passMuon_barrel = 0;
+  count_passMuon_endcap = 0;
+  count_passMuon_and_trigger = 0;
+  count_passMuon_and_trigger_barrel = 0;
+  count_passMuon_and_trigger_endcap = 0;
+  count_passTauMuonPair = 0;
+  count_passDR_n1 = 0;
+  count_passMT_n1 = 0;
+  count_passPzeta_n1 = 0;
+  count_passExtraLep_n1 = 0;
+  count_BTag_n1 = 0;
+  count_passMuonTrigger_n1 = 0;
+  count_passAll = 0;
 }
 
 //
@@ -145,6 +188,9 @@ ZtoTauHadRecoSelector::filter(edm::Event& iEvent, const edm::EventSetup& iSetup)
   iEvent.getByToken(vtxToken_, vertices);
   const reco::Vertex &PV = vertices->front();
 
+  edm::Handle<pat::TauCollection> taus;
+  iEvent.getByToken(tauToken_, taus);
+
   edm::Handle<pat::MuonCollection> muons;
   iEvent.getByToken(muonToken_, muons);
 
@@ -153,9 +199,6 @@ ZtoTauHadRecoSelector::filter(edm::Event& iEvent, const edm::EventSetup& iSetup)
  
   edm::Handle<pat::JetCollection> jets;
   iEvent.getByToken(jetToken_, jets);
-
-  edm::Handle<pat::TauCollection> taus;
-  iEvent.getByToken(tauToken_, taus);
 
   edm::Handle<pat::METCollection> mets;
   iEvent.getByToken(metToken_, mets);
@@ -175,7 +218,7 @@ ZtoTauHadRecoSelector::filter(edm::Event& iEvent, const edm::EventSetup& iSetup)
   // trigger 
   const edm::TriggerNames &names = iEvent.triggerNames(*triggerBits);
   string trigger_muon = "HLT_IsoMu20";
-  bool found_muon = false;
+  bool found_muon_trigger = false;
   bool bit_muon = false;
   string name_muon = "";
   for (unsigned int i = 0, n = triggerBits->size(); i < n; i++)
@@ -184,18 +227,17 @@ ZtoTauHadRecoSelector::filter(edm::Event& iEvent, const edm::EventSetup& iSetup)
 
      std::size_t pos = triggerName.find(trigger_muon);
      if ( pos != std::string::npos ) {
-       found_muon = true;
+       found_muon_trigger = true;
        bit_muon = triggerBits->accept(i);
        name_muon = triggerName;
      }
   }
-  if (!found_muon) std::cout << "failed to find muon trigger!" << std::endl;
   bool passMuonTrigger = bit_muon;
 
   // muons
   vector<const pat::Muon *> passedMuons;
   for (const pat::Muon &muon : *muons) {
-    if (muon.pt() > 21.0 &&
+    if (muon.pt() > 22.0 &&
         fabs(muon.eta()) < 2.1 &&
         //(muon.chargedHadronIso() + muon.neutralHadronIso() + muon.photonIso())/muon.pt() - 0.5 * (*rho) < 0.1 &&
         (muon.chargedHadronIso() + muon.neutralHadronIso() + muon.photonIso())/muon.pt() < cfg_isoCut &&
@@ -273,7 +315,7 @@ ZtoTauHadRecoSelector::filter(edm::Event& iEvent, const edm::EventSetup& iSetup)
   vector<const pat::Jet *> tauJetCands;
   vector<int> tauJetCandsCharge;
   for (const pat::Jet &jet : *jets) {
-    if (jet.pt() > 20 && fabs(jet.eta()) < 2.4 && jet.bDiscriminator("pfCombinedInclusiveSecondaryVertexV2BJetTags") > 0.8484)
+    if (jet.pt() > 20 && fabs(jet.eta()) < 2.4 && jet.bDiscriminator("pfCombinedInclusiveSecondaryVertexV2BJetTags") > 0.890)
       atLeastOneBTag = true;
     bool noNearbyGlobalMuon = true;
     for (const pat::Muon &muon : *muons) {
@@ -363,12 +405,14 @@ ZtoTauHadRecoSelector::filter(edm::Event& iEvent, const edm::EventSetup& iSetup)
     }
   }
   
+  // filter decision
   bool passTauMuonPair = false;
   bool passDR = false;
   bool passMT = false;
   bool passPzeta = false;
   bool passExtraLep = false;
   bool passBTag = false;
+
   if (cfg_tauObjs) {  
     // at least one muon and one tau cand
     if (muon_index != -1 && tau_index != -1) passTauMuonPair = true;
@@ -431,30 +475,90 @@ ZtoTauHadRecoSelector::filter(edm::Event& iEvent, const edm::EventSetup& iSetup)
   // btag veto
   if (!atLeastOneBTag) passBTag = true;
 
+  // barrel vs endcap muon if pass
+  bool muonIsBarrel = false;
+  bool muonIsEndcap = false;
+  if (passedMuons.size() > 0 ) {
+
+    const pat::Muon * poorestIsoMuon = passedMuons[0];
+    double lowestIso = 2.0;
+    for (const pat::Muon &muon : *muons) {
+      double iso = (muon.chargedHadronIso() + muon.neutralHadronIso() + muon.photonIso())/muon.pt();
+      if (iso < lowestIso) lowestIso = iso; poorestIsoMuon = &muon;
+    }
+
+    double eta = poorestIsoMuon->eta();
+    if (eta < 1.479) muonIsBarrel = true; 
+    else muonIsEndcap = true;
+  }
+
   // final filter decision
   bool passAll = passMuonTrigger && passTauMuonPair && passDR && passMT && passPzeta && passExtraLep && passBTag;
+
+  // cutflow print
+  count_events++;
+  if(found_muon_trigger) count_foundMuonTrigger++;
+  if(passMuonTrigger) count_passMuonTrigger++;
+  if(passedMuons.size() > 0) count_passMuon++;
+  if(passedMuons.size() > 0 && muonIsBarrel) count_passMuon_barrel++;
+  if(passedMuons.size() > 0 && muonIsEndcap) count_passMuon_endcap++;
+  if(passedMuons.size() > 0 && passMuonTrigger) count_passMuon_and_trigger++;
+  if(passedMuons.size() > 0 && passMuonTrigger && muonIsBarrel) count_passMuon_and_trigger_barrel++;
+  if(passedMuons.size() > 0 && passMuonTrigger && muonIsEndcap) count_passMuon_and_trigger_endcap++;
+  if(passTauMuonPair) count_passTauMuonPair++;
+  if(passAll) count_passAll++;
+  if(                   passTauMuonPair && passDR && passMT && passPzeta && passExtraLep && passBTag) count_passMuonTrigger_n1++;
+  if(passMuonTrigger && passTauMuonPair &&           passMT && passPzeta && passExtraLep && passBTag) count_passDR_n1++;
+  if(passMuonTrigger && passTauMuonPair && passDR &&           passPzeta && passExtraLep && passBTag) count_passMT_n1++;
+  if(passMuonTrigger && passTauMuonPair && passDR && passMT &&              passExtraLep && passBTag) count_passPzeta_n1++;
+  if(passMuonTrigger && passTauMuonPair && passDR && passMT && passPzeta &&                 passBTag) count_passExtraLep_n1++;
+  if(passMuonTrigger && passTauMuonPair && passDR && passMT && passPzeta && passExtraLep            ) count_BTag_n1++;
+
   return passAll;
 }
 
 void
-ZtoTauHadRecoSelector::beginStream(edm::StreamID)
+ZtoTauHadRecoSelector::beginJob()
 {
 }
 
 void
-ZtoTauHadRecoSelector::endStream() {
+ZtoTauHadRecoSelector::endJob()
+{
+  if (cfg_dumpCutflow) {
+    // cutflow print
+    std::cout << "" << std::endl;
+    std::cout << "CUTFLOW" << std::endl;
+    std::cout << "count_events " << count_events << std::endl;
+    std::cout << "count_foundMuonTrigger " << count_foundMuonTrigger << std::endl;
+    std::cout << "count_passMuonTrigger " << count_passMuonTrigger << std::endl;
+    std::cout << "count_passMuon " << count_passMuon << std::endl;
+    std::cout << "count_passMuon_barrel " << count_passMuon_barrel << std::endl;
+    std::cout << "count_passMuon_endcap " << count_passMuon_endcap << std::endl;
+    std::cout << "count_passMuon_and_trigger " << count_passMuon_and_trigger << std::endl;
+    std::cout << "count_passMuon_and_trigger_barrel " << count_passMuon_and_trigger_barrel << std::endl;
+    std::cout << "count_passMuon_and_trigger_endcap " << count_passMuon_and_trigger_endcap << std::endl;
+    std::cout << "count_passTauMuonPair " << count_passTauMuonPair << std::endl;
+    std::cout << "count_passDR_n1 " << count_passDR_n1 << std::endl;
+    std::cout << "count_passMT_n1 " << count_passMT_n1 << std::endl;
+    std::cout << "count_passPzeta_n1 " << count_passPzeta_n1 << std::endl;
+    std::cout << "count_passExtraLep_n1 " << count_passExtraLep_n1 << std::endl;
+    std::cout << "count_BTag_n1 " << count_BTag_n1 << std::endl;
+    std::cout << "count_passMuonTrigger_n1 " << count_passMuonTrigger_n1 << std::endl;
+    std::cout << "count_passAll " << count_passAll << std::endl;
+  }
 }
 
 void
 ZtoTauHadRecoSelector::beginRun(edm::Run const&, edm::EventSetup const&)
-{ 
+{
 }
- 
+
 void
 ZtoTauHadRecoSelector::endRun(edm::Run const&, edm::EventSetup const&)
 {
 }
- 
+
 void
 ZtoTauHadRecoSelector::beginLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&)
 {
@@ -469,6 +573,7 @@ void
 ZtoTauHadRecoSelector::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
   edm::ParameterSetDescription desc;
   desc.addUntracked<bool>("tauObjs", false);
+  desc.addUntracked<bool>("dumpCutflow", true);
   desc.addUntracked<double>("isoCut", 0.1);
   descriptions.add("ZtoTauHadRecoSelectorFilter", desc);
 }
