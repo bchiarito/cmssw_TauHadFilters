@@ -63,7 +63,7 @@ namespace TauHadFilters
 
   typedef struct PreSelectionResult PreSelectionResult;
 
-  struct PreSelectionResult computePreSelectionResult(edm::Event& iEvent, edm::Handle<edm::TriggerResults>& triggerBits)
+  struct PreSelectionResult computePreSelectionResult(const edm::Event& iEvent, edm::Handle<edm::TriggerResults>& triggerBits)
   {
     struct PreSelectionResult result;
 
