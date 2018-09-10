@@ -54,6 +54,9 @@
 // edm utilities includes
 #include "DataFormats/Math/interface/deltaR.h"
 
+// testing new framework, offload preselection code
+#include "MyTauHadFilters/TauHadFilters/interface/ZtoTauHadPreSelection.h"
+
 // namesspace defaults
 using std::vector;
 using std::string;
@@ -206,6 +209,7 @@ ZtoTauHadRecoSelector::filter(edm::Event& iEvent, const edm::EventSetup& iSetup)
 
   edm::Handle<double> rho;
   iEvent.getByToken(rhoToken_, rho);
+
 
   // debug: verify both accessors for muon tag are equivilant
   for (const pat::Muon &muon : *muons) {
@@ -514,7 +518,23 @@ ZtoTauHadRecoSelector::filter(edm::Event& iEvent, const edm::EventSetup& iSetup)
   if(passMuonTrigger && passTauMuonPair && passDR && passMT && passPzeta &&                 passBTag) count_passExtraLep_n1++;
   if(passMuonTrigger && passTauMuonPair && passDR && passMT && passPzeta && passExtraLep            ) count_BTag_n1++;
 
-  return passAll;
+  // new framework test
+  if (muons->size() == 0) return false;
+  /*TauHadFilters::PreSelectionResult result;
+  result = TauHadFilters::computePreSelectionResult(iEvent, triggerBits);
+  if (!result.foundTagMuon) return false;
+  
+  const pat::Muon * my_muon  = &((*muons)[0]);
+  const pat::Muon * struct_muon = result.tagMuon;
+  cout << "my_muon    : " << my_muon->pt() << endl;
+  cout << "struct_muon: " << struct_muon->pt() << endl;*/
+
+  
+  TauHadFilters::PreSelectionResult result;
+  result = TauHadFilters::computePreSelectionResult(iEvent, triggerBits);
+  
+
+  return result.passPreSelection;
 }
 
 void
