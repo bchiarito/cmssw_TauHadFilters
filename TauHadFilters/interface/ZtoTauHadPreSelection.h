@@ -40,8 +40,10 @@ namespace TauHadFilters
   {
     // objects
     bool foundTagMuon;
+    int nTagMuons;
     const pat::Muon * tagMuon;
     bool foundProbeTau;
+    int nProbeTaus;
     const pat::Jet * probeTau;
     // trigger
     string foundMuonTrigger;
@@ -300,6 +302,8 @@ namespace TauHadFilters
     bool passAll = passMuonTrigger && passTauMuonPair && passDR && passMT && passPzeta && passExtraLep && passBTag;
 
     // fill return struct
+    result.nTagMuons = passedMuons.size();
+    result.nProbeTaus = tauJetCands.size();
     result.foundTagMuon = (muon_jet_index != -1);
     result.foundProbeTau = (tau_jet_index != -1);
     result.tagMuon = NULL;
