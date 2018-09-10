@@ -528,11 +528,9 @@ ZtoTauHadRecoSelector::filter(edm::Event& iEvent, const edm::EventSetup& iSetup)
   const pat::Muon * struct_muon = result.tagMuon;
   cout << "my_muon    : " << my_muon->pt() << endl;
   cout << "struct_muon: " << struct_muon->pt() << endl;*/
-
   
   TauHadFilters::PreSelectionResult result;
-  result = TauHadFilters::computePreSelectionResult(iEvent, triggerBits);
-  
+  result = TauHadFilters::computePreSelectionResult(iEvent, triggerBits, triggerObjects, triggerPrescales, vertices, taus, muons, electrons, jets, mets, rho);
 
   return result.passPreSelection;
 }

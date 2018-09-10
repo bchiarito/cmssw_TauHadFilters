@@ -65,42 +65,12 @@ namespace TauHadFilters
 
   typedef struct PreSelectionResult PreSelectionResult;
 
-  struct PreSelectionResult computePreSelectionResult(const edm::Event& iEvent, edm::Handle<edm::TriggerResults>& triggerBits)
+  struct PreSelectionResult computePreSelectionResult(const edm::Event& iEvent, edm::Handle<edm::TriggerResults>& triggerBits, edm::Handle<pat::TriggerObjectStandAloneCollection> triggerObjects, edm::Handle<pat::PackedTriggerPrescales> triggerPrescales, edm::Handle<reco::VertexCollection> vertices, edm::Handle<pat::TauCollection> taus, edm::Handle<pat::MuonCollection> muons, edm::Handle<pat::ElectronCollection> electrons, edm::Handle<pat::JetCollection> jets, edm::Handle<pat::METCollection> mets, edm::Handle<double> rho)
   {
     struct PreSelectionResult result;
 
-    // get event content
-    string triggerBits_ = "TriggerResults";
-    string triggerObjects_ = "selectdPatTrigger";
-    string triggerPrescales_ = "patTrigger";
-    string vtxLabel_ = "offlineSlimmedPrimaryVertices";
-    string tauLabel_ = "slimmedTaus";
-    string muonLabel_ = "slimmedMuons";
-    string electronLabel_ = "slimmedElectrons";
-    string jetLabel_ = "slimmedJets";
-    string metLabel_ = "slimmedMETs";
-    string rhoLabel_ = "fixedGridRhoFastjetCentralChargedPileUp";
-    
-    edm::Handle<pat::TriggerObjectStandAloneCollection> triggerObjects;
-    iEvent.getByLabel(triggerObjects_, triggerObjects);
-    edm::Handle<pat::PackedTriggerPrescales> triggerPrescales;
-    iEvent.getByLabel(triggerPrescales_, triggerPrescales);
-    edm::Handle<reco::VertexCollection> vertices;
-    iEvent.getByLabel(vtxLabel_, vertices);
     const reco::Vertex &PV = vertices->front();
-    edm::Handle<pat::TauCollection> taus;
-    iEvent.getByLabel(tauLabel_, taus);
-    edm::Handle<pat::MuonCollection> muons;
-    iEvent.getByLabel(muonLabel_, muons);
-    edm::Handle<pat::ElectronCollection> electrons;
-    iEvent.getByLabel(electronLabel_, electrons);
-    edm::Handle<pat::JetCollection> jets;
-    iEvent.getByLabel(jetLabel_, jets);
-    edm::Handle<pat::METCollection> mets;
-    iEvent.getByLabel(metLabel_, mets);
     pat::MET MET = (*mets)[0];
-    edm::Handle<double> rho;
-    iEvent.getByLabel(rhoLabel_, rho);
 
     // trigger 
     const edm::TriggerNames &names = iEvent.triggerNames(*triggerBits);
