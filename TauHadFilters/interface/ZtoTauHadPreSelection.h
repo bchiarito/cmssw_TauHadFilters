@@ -55,7 +55,7 @@ namespace TauHadFilters
     // event wide vetos
     bool passExtraMuonVeto;
     bool passDiMuonVeto;
-    bool pssExtraElectronVeto;
+    bool passExtraElectronVeto;
     bool passBtagVeto;
     double btagDiscriminant;
     // summary bools
@@ -295,7 +295,7 @@ namespace TauHadFilters
     // event wide vetos
     result.passExtraMuonVeto = !extraMuon;
     result.passDiMuonVeto = !diMuon;
-    result.pssExtraElectronVeto = !extraElectron;
+    result.passExtraElectronVeto = !extraElectron;
     result.passBtagVeto = !atLeastOneBTag;
     result.btagDiscriminant = highestBTagDiscriminant;
     // summary bools
