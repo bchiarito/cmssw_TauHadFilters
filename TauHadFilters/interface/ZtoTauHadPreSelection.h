@@ -74,7 +74,7 @@ namespace TauHadFilters
 
     // trigger 
     const edm::TriggerNames &names = iEvent.triggerNames(*triggerBits);
-    string trigger_muon = "HLT_IsoMu20";
+    string trigger_muon = "HLT_IsoMu24";
     bool bit_muon = false;
     string name_muon_trigger = "";
     for (unsigned int i = 0, n = triggerBits->size(); i < n; i++)
@@ -92,10 +92,10 @@ namespace TauHadFilters
     // muons
     vector<const pat::Muon *> passedMuons;
     for (const pat::Muon &muon : *muons) {
-      if (muon.pt() > 22.0 &&
+      if (muon.pt() > 25.0 &&
           fabs(muon.eta()) < 2.1 &&
-          //(muon.chargedHadronIso() + muon.neutralHadronIso() + muon.photonIso())/muon.pt() - 0.5 * (*rho) < 0.1 &&
-          (muon.chargedHadronIso() + muon.neutralHadronIso() + muon.photonIso())/muon.pt() < 0.15 &&
+          (muon.chargedHadronIso() + muon.neutralHadronIso() + muon.photonIso())/muon.pt() - 0.5 * (*rho) < 0.1 &&
+          //(muon.chargedHadronIso() + muon.neutralHadronIso() + muon.photonIso())/muon.pt() < 0.15 &&
           muon.muonBestTrack()->dz(PV.position()) < 0.2 &&
           abs(muon.muonBestTrack()->dxy(PV.position())) < 0.045 &&
           muon.isMediumMuon() )
