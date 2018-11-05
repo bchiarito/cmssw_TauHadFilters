@@ -279,7 +279,7 @@ namespace TauHadFilters
     result.tagMuon = NULL;
     result.probeTau = NULL;
     if (result.foundTagMuon) result.tagMuon = &(*passedMuons[muon_jet_index]);
-    result.tagMuon_iso = (result.tagMuon->chargedHadronIso() + result.tagMuon->neutralHadronIso() + result.tagMuon->photonIso())/result.tagMuon->pt() - 0.5 * (*rho) < 0.1;
+    if (result.foundTagMuon) result.tagMuon_iso = (result.tagMuon->chargedHadronIso() + result.tagMuon->neutralHadronIso() + result.tagMuon->photonIso())/result.tagMuon->pt() - 0.5 * (*rho) < 0.1;
     if (result.foundProbeTau) result.probeTau = &(*tauJetCands[tau_jet_index]);
     // trigger
     result.foundMuonTrigger = name_muon_trigger;

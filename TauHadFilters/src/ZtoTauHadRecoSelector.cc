@@ -205,7 +205,7 @@ ZtoTauHadRecoSelector::filter(edm::Event& iEvent, const edm::EventSetup& iSetup)
   TauHadFilters::PreSelectionResult result;
   result = TauHadFilters::computePreSelectionResult(iEvent, triggerBits, triggerObjects, triggerPrescales, vertices, taus, muons, electrons, jets, mets, rho);
 
-  if (result.passPreSelection) cutflow_total += 1;
+  cutflow_total += 1;
   if (result.foundMuonTrigger != "") cutflow_foundTrigger += 1;
   if (result.passMuonTrigger) cutflow_passTrigger += 1;
   if (result.foundTagMuon) cutflow_passMuon += 1;
